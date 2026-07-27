@@ -4,6 +4,7 @@ import { bunny } from 'laravel-vite-plugin/fonts';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
+    base: '/',
     plugins: [
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.js'],
@@ -18,6 +19,13 @@ export default defineConfig({
     ],
     build: {
         outDir: 'dist',
+        rollupOptions: {
+            input: {
+                main: 'index.html',
+                appCss: 'resources/css/app.css',
+                appJs: 'resources/js/app.js',
+            },
+        },
     },
     server: {
         watch: {
