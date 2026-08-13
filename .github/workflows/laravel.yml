@@ -1,0 +1,62 @@
+name: Laravel CI/CD Automated Testing Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  laravel-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository Code
+      uses: actions/checkout@v4
+
+    - name: Setup PHP 8.4
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.4'
+        extensions: mbstring, pdo, pdo_sqlite, sqlite3, dom, curl, libxml, filter, json, iconv
+        coverage: none
+
+    - name: Get Composer Cache Directory
+      id: composer-cache
+      run: |
+        echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+    - name: Cache Composer Dependencies
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.composer-cache.outputs.dir }}
+        key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-composer-
+
+    - name: Install Composer Dependencies
+      run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+    - name: Setup Node.js & Build Frontend Assets
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install NPM Dependencies & Build Assets
+      run: |
+        npm ci
+        npm run build
+
+    - name: Prepare Application Environment & Database
+      run: |
+        cp .env.example .env
+        mkdir -p database
+        touch database/database.sqlite
+        php artisan key:generate
+
+    - name: Run Database Migrations & Seeders
+      run: php artisan migrate --force
+
+    - name: Run PHPUnit Automated Tests
+      run: php artisan test
